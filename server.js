@@ -30,13 +30,42 @@ app.post('/api/proxy', async (req, res) => {
             },
             body: JSON.stringify(req.body.data) // Pass the data to the API
         });
-        const data = await apiResponse.json();
-        res.json(data);
+        const initialResponse = await apiResponse.json();
+        
+        // Check if the response includes a URL to get the result
+        if (initialResponse.urls && initialResponse.urls.get) {
+            // Poll the URL to get the result
+            const result = await pollForResult(initialResponse.urls.get, req.body.apiKey);
+            res.json(result);
+        } else {
+            // If no URL is provided, return the initial response
+            res.json(initialResponse);
+        }
     } catch (error) {
         console.error('API request failed:', error);
         res.status(500).json({ error: 'Failed to fetch API' });
     }
 });
+
+// Function to poll for result
+async function pollForResult(url, apiKey) {
+    while (true) {
+        const resultResponse = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${apiKey}`
+            }
+        });
+        const resultData = await resultResponse.json();
+
+        // Check if the task has completed or failed
+        if (resultData.status === 'succeeded' || resultData.status === 'failed') {
+            return resultData;
+        }
+
+        // Optionally, implement some delay here
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+    }
+}
 
 // Start the server on a specified port
 const PORT = process.env.PORT || 3000;
