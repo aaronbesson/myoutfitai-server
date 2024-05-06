@@ -26,7 +26,7 @@ app.post('/api/proxy', async (req, res) => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${req.body.apiKey}` // Pass the API key securely from your frontend
+                'Authorization': `Bearer ${process.env.REPLICATE_API_KEY}` // Pass the API key securely from your frontend
             },
             body: JSON.stringify(req.body.data) // Pass the data to the API
         });
@@ -35,7 +35,7 @@ app.post('/api/proxy', async (req, res) => {
         // Check if the response includes a URL to get the result
         if (initialResponse.urls && initialResponse.urls.get) {
             // Poll the URL to get the result
-            const result = await pollForResult(initialResponse.urls.get, req.body.apiKey);
+            const result = await pollForResult(initialResponse.urls.get, `${process.env.REPLICATE_API_KEY}`);
             res.json(result);
         } else {
             // If no URL is provided, return the initial response
@@ -48,11 +48,11 @@ app.post('/api/proxy', async (req, res) => {
 });
 
 // Function to poll for result
-async function pollForResult(url, apiKey) {
+async function pollForResult(url) {
     while (true) {
         const resultResponse = await fetch(url, {
             headers: {
-                'Authorization': `Bearer ${apiKey}`
+                'Authorization': `Bearer ${process.env.REPLICATE_API_KEY}`
             }
         });
         const resultData = await resultResponse.json();
