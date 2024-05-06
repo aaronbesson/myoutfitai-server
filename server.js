@@ -6,8 +6,8 @@ const app = express();
 
 // Define CORS options
 const corsOptions = {
-    origin: 'chrome-extension://iogijhjfhbigeacmkpbkbkkbpcgmphij', // Replace with your actual extension ID
-    optionsSuccessStatus: 200 // For legacy browser support
+    origin: 'https://myoutfitai-server.onrender.com',
+    methods: 'POST'
 };
 
 // Apply CORS with the specified options to all requests
