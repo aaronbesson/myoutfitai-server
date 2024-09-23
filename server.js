@@ -24,6 +24,7 @@ app.use(express.json());
 // Define a POST route for the proxy endpoint
 const API_KEY = process.env.FASHN_API_KEY;
 
+<<<<<<< HEAD
 const upload = multer();
 
 app.post('/api/proxy', upload.fields([{ name: 'model_image' }, { name: 'garment_image' }]), async (req, res) => {
@@ -50,6 +51,23 @@ app.post('/api/proxy', upload.fields([{ name: 'model_image' }, { name: 'garment_
         const initialResponse = await apiResponse.json();
         
         if (initialResponse.id) {
+=======
+app.post('/api/proxy', async (req, res) => {
+    try {
+        const apiResponse = await fetch('https://api.fashn.ai/v1/run', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_KEY}`
+            },
+            body: JSON.stringify(req.body)
+        });
+        const initialResponse = await apiResponse.json();
+        
+        // Check if the response includes a URL to get the result
+        if (initialResponse.id) {
+            // Poll the URL to get the result
+>>>>>>> ac84a01eadad20dea5a57e101382eff5d591adde
             const result = await pollForResult(initialResponse.id);
             res.json(result);
         } else {
