@@ -1,8 +1,10 @@
-// Import necessary modules
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
+const multer = require('multer');
+const FormData = require('form-data');
 const app = express();
+require('dotenv').config();
 
 // Define CORS options
 const corsOptions = {
@@ -20,25 +22,37 @@ app.options('/api/proxy', cors(corsOptions));
 app.use(express.json());
 
 // Define a POST route for the proxy endpoint
-app.post('/api/proxy', async (req, res) => {
+const API_KEY = process.env.FASHN_API_KEY;
+
+const upload = multer();
+
+app.post('/api/proxy', upload.fields([{ name: 'model_image' }, { name: 'garment_image' }]), async (req, res) => {
     try {
-        const apiResponse = await fetch('https://api.replicate.com/v1/predictions', {
+        const formData = new FormData();
+        
+        // Append files
+        formData.append('model_image', req.files['model_image'][0].buffer, { filename: 'model.jpg' });
+        formData.append('garment_image', req.files['garment_image'][0].buffer, { filename: 'garment.jpg' });
+        
+        // Append other fields
+        Object.keys(req.body).forEach(key => {
+            formData.append(key, req.body[key]);
+        });
+
+        const apiResponse = await fetch('https://api.fashn.ai/v1/run', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${req.body.apiKey}` // Pass the API key securely from your frontend
+                ...formData.getHeaders(),
+                'Authorization': `Bearer ${API_KEY}`
             },
-            body: JSON.stringify(req.body.data) // Pass the data to the API
+            body: formData
         });
         const initialResponse = await apiResponse.json();
         
-        // Check if the response includes a URL to get the result
-        if (initialResponse.urls && initialResponse.urls.get) {
-            // Poll the URL to get the result
-            const result = await pollForResult(initialResponse.urls.get, req.body.apiKey);
+        if (initialResponse.id) {
+            const result = await pollForResult(initialResponse.id);
             res.json(result);
         } else {
-            // If no URL is provided, return the initial response
             res.json(initialResponse);
         }
     } catch (error) {
@@ -48,22 +62,22 @@ app.post('/api/proxy', async (req, res) => {
 });
 
 // Function to poll for result
-async function pollForResult(url, apiKey) {
+async function pollForResult(id) {
     while (true) {
-        const resultResponse = await fetch(url, {
+        const resultResponse = await fetch(`https://api.fashn.ai/v1/status/${id}`, {
             headers: {
-                'Authorization': `Bearer ${apiKey}`
+                'Authorization': `Bearer ${API_KEY}`
             }
         });
         const resultData = await resultResponse.json();
 
         // Check if the task has completed or failed
-        if (resultData.status === 'succeeded' || resultData.status === 'failed') {
+        if (resultData.status === 'completed' || resultData.status === 'failed') {
             return resultData;
         }
 
         // Optionally, implement some delay here
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+        await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
     }
 }
 
